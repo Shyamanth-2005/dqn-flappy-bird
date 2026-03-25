@@ -27,3 +27,7 @@ if __name__ == "__main__":
   model = DQN(state_dim, action_dim)
   state = torch.randn(1, state_dim)
   print(model(state))
+
+
+
+  
