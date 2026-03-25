@@ -1,6 +1,7 @@
 import flappy_bird_gymnasium
 import gymnasium
-env = gymnasium.make("FlappyBird-v0", render_mode="human", use_lidar=False) # use_lidar: [False, True]
+import torch
+from dqn import DQN
 
 
 """
@@ -16,17 +17,26 @@ REWARDS:
 - 0.5 - touch top of the screen
 """
 
-obs, _ = env.reset()
-while True:
-    # NEXT ACTION:
-    # feed the observation to your agent here
-    action = env.action_space.sample()
-
-    # processing:
-    obs, reward, terminated, _, info = env.step(action)
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+class Agent:
+  def run(self, is_training = True, render = False):
+    env = gymnasium.make("FlappyBird-v0", render_mode="human" if render else None, use_lidar=False) # use_lidar: [False, True]
     
-    # checking if the player is still alive
-    if terminated:
-        break
+    num_states = env.observation_space.shape[0]
+    num_actions = env.action_space.n
+    policy_dqn = DQN(num_states, num_actions).to_device(DEVICE)
+    obs, _ = env.reset()
+    while True:
+        # NEXT ACTION:
+        # feed the observation to your agent here
+        action = env.action_space.sample()
 
-env.close() 
+        # processing:
+        obs, reward, terminated, _, info = env.step(action)
+        
+        # checking if the player is still alive
+        if terminated:
+            break
+
+
+    env.close() 

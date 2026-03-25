@@ -6,4 +6,5 @@ readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
     "tensorflow>=2.20.0",
+    "torchaudio>=2.11.0",
 ]
