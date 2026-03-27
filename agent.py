@@ -51,23 +51,42 @@ class Agent:
     q[state, action] = reward if next_state is terminal else
     reward + discount_factor * max(q[next_state,actions])
     """
-    
-    for state, action, next_state, reward, terminated in mini_batch:
-      if terminated:
-        target = reward
-      else:
-        with torch.no_grad():
-          target_q = reward + self.discount_factor_g * target_dqn(next_state).max()
+    # transpose the list of experiences and seperate each element
+    states, actions, next_states, rewards, terminations = zip(*mini_batch)
+
+    # stack tensors to create batch tensors
+    # tensor([1, 2, 3])
+
+    states = torch.stack(states)
+    actions = torch.stack(actions)
+    next_states = torch.stack(next_states)
+    rewards = torch.tensor(rewards).float().to(DEVICE)
+    terminations = torch.tensor(terminations).float().to(DEVICE)
+
+    with torch.no_grad():
+       # calculate target q values (expected returns )
+       target_q = rewards + (1 - terminations) * self.discount_factor_g * target_dqn(next_states).max(dim = 1)[0]
+       """
+       target_dqn(next_states) => tensor([[1,2,3], [4,5,6]])
+        .max(dim = 1) => torch.return_types.max(values = tensor([3, 6]), indices = tensor([3, 0, 0 ,1]))
+          [0] => tensor([3, 6])
+       """
+    # calculate q values from the current policy
+    current_q = policy_dqn(states).gather(dim = 1, index = actions.unsqueeze(dim = 1)).squeeze()
+    """
+      policy_dqn(states) => tensor([1,2,3]. [4,5,6])
+        actions.
+    """
+
+
       
-      current_q = policy_dqn(state)
+    # compute loss
+    loss = self.loss_fn(current_q, target_q)
       
-      # compute loss
-      loss = self.loss_fn(current_q, target_q)
-      
-      # optimize the model
-      self.optimizer.zero_grad() # clear gradients
-      self.backward() # compute gradients (backwardpropagation)
-      self.optimizer.step() # update network parameters ie. weights and bais
+    # optimize the model
+    self.optimizer.zero_grad() # clear gradients
+    loss.backward() # compute gradients (backwardpropagation) or direction of weight updat
+    self.optimizer.step() # update network parameters ie. weights and bais
       
     
   def run(self, is_training = True, render = False):
