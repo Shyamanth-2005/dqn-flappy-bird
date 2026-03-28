@@ -1,0 +1,5 @@
+training time: 7 hrs 23 min
+best reward: 118.5 at episode 1144460
+graph path: C:\Users\Shyam\Desktop\reinforcement-learning-project\runs\flappybird1.png
+model path: C:\Users\Shyam\Desktop\reinforcement-learning-project\runs\flappybird1_dqn.pt
+logs: C:\Users\Shyam\Desktop\reinforcement-learning-project\runs\flappybird1.log
