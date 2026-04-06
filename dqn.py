@@ -1,7 +1,22 @@
 import torch
 from torch import nn
 import torch.nn.functional as F
+"""input states
+12 states
+the last pipe's horizontal position
+the last top pipe's vertical position
+the last bottom pipe's vertical position
+the next pipe's horizontal position
+the next top pipe's vertical position
+the next bottom pipe's vertical position
+the next next pipe's horizontal position
+the next next top pipe's vertical position
+the next next bottom pipe's vertical position
+player's vertical position
+player's vertical velocity
+player's rotation
 
+"""
 class DQN(nn.Module):
   
   def __init__(self,state_dim, action_dim, hidden_dim = 256):

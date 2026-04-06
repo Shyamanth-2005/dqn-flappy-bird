@@ -1,0 +1,2 @@
+- ddqn duplicates or decouples the action selection(using policy network) and the evaluation network(using target network),
+then we have a more exploratory way of choosing the action , thus avoiding the overestimation(bais) problem in dqn

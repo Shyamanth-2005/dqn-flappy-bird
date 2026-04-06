@@ -296,3 +296,4 @@ if __name__ == "__main__":
     dql.run(is_training = True)
   else:
     dql.run(is_training = False, render = True)
+    
