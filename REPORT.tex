@@ -1,0 +1,455 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{float}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+
+% Code listing settings
+\lstset{
+    language=Python,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue},
+    commentstyle=\color{gray},
+    stringstyle=\color{red},
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    stepnumber=1,
+    numbersep=5pt,
+    backgroundcolor=\color{white},
+    showspaces=false,
+    showstringspaces=false,
+    showtabs=false,
+    frame=single,
+    tabsize=2,
+    captionpos=b,
+    breaklines=true,
+    breakatwhitespace=false
+}
+
+% Header and footer
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{Deep Q-Learning Network}
+\lhead{Reinforcement Learning Project}
+\rfoot{Page \thepage}
+
+% Force each \section to start on a new page
+\newcommand{\sectionbreak}{\clearpage}
+
+\begin{document}
+
+\begin{titlepage}
+    \centering
+    \vspace*{\fill}
+    
+    {\LARGE\textbf{Deep Q-Learning Network for Flappy Bird}}\\[0.5em]
+    {\large Reinforcement Learning Project}\\[3em]
+    
+    {\large Shyamanth Reddy M}\\[0.3em]
+    {\large 23BAI1285}\\[1em]
+    
+    {\large School of Computer Science and Engineering}\\[0.3em]
+    {\large Vellore Institute of Technology}\\[2em]
+    
+    {\large \today}\\[2em]
+    
+    {\small \url{https://github.com/Shyamanth-2005/dqn-flappy-bird}}
+    
+    \vspace*{\fill}
+\end{titlepage}
+
+\clearpage
+\begin{abstract}
+This project implements a Deep Q-Learning Network (DQN) agent to play the Flappy Bird game using reinforcement learning techniques. The agent learns optimal gameplay strategies through trial and error by maximizing cumulative rewards. The implementation leverages PyTorch for neural network construction, Gymnasium for environment simulation, and experience replay for stable learning. The project demonstrates the effectiveness of value-based reinforcement learning methods in solving complex sequential decision-making problems. Key enhancements include Double DQN and Dueling DQN architectures to improve training stability and performance.
+\end{abstract}
+
+\clearpage
+\tableofcontents
+
+\clearpage
+\section{Introduction}
+
+\subsection{Background}
+Reinforcement Learning (RL) has emerged as a powerful paradigm for training agents to make sequential decisions in complex environments. Unlike supervised learning, RL agents learn through interaction with their environment, receiving feedback in the form of rewards or penalties. This approach has achieved remarkable success in various domains, from game playing to robotics.
+
+Deep Q-Learning Networks (DQN) represent a significant breakthrough in reinforcement learning, combining Q-learning with deep neural networks to handle high-dimensional state spaces. This project applies DQN to master the Flappy Bird game, a challenging environment requiring precise timing and decision-making.
+
+\subsection{Problem Statement}
+The objective is to develop an intelligent agent that can autonomously learn to play Flappy Bird by maximizing its survival time and score. The agent must learn to navigate through pipes by deciding when to flap or stay idle, based solely on observations of the game state.
+
+\subsection{Motivation}
+Traditional game-playing algorithms rely on hand-crafted features and heuristics. This project demonstrates how reinforcement learning can autonomously discover effective strategies without explicit programming, showcasing the potential of AI in solving complex control problems.
+
+\section{Theoretical Background}
+
+\subsection{Markov Decision Process}
+The Flappy Bird environment is modeled as a Markov Decision Process (MDP) defined by the tuple $(S, A, P, R, \gamma)$ where:
+\begin{itemize}
+    \item $S$: State space (bird position, velocity, pipe positions)
+    \item $A$: Action space $\{0, 1\}$ (do nothing, flap)
+    \item $P$: State transition probability
+    \item $R$: Reward function
+    \item $\gamma$: Discount factor (0.99)
+\end{itemize}
+
+\subsection{Q-Learning}
+Q-learning is a value-based reinforcement learning algorithm that learns the action-value function $Q(s, a)$, representing the expected cumulative reward for taking action $a$ in state $s$. The Q-value update rule is:
+
+\begin{equation}
+Q(s, a) \leftarrow Q(s, a) + \alpha [r + \gamma \max_{a'} Q(s', a') - Q(s, a)]
+\end{equation}
+
+where $\alpha$ is the learning rate, $r$ is the immediate reward, and $s'$ is the next state.
+
+\subsection{Deep Q-Network}
+DQN approximates the Q-function using a neural network with parameters $\theta$. The network is trained to minimize the temporal difference (TD) error:
+
+\begin{equation}
+L(\theta) = \mathbb{E}_{(s,a,r,s') \sim \mathcal{D}} \left[ \left( r + \gamma \max_{a'} Q(s', a'; \theta^-) - Q(s, a; \theta) \right)^2 \right]
+\end{equation}
+
+where $\theta^-$ represents the parameters of a separate target network.
+
+\subsection{Key Innovations}
+
+\subsubsection{Experience Replay}
+Experience replay stores transitions $(s, a, r, s', \text{done})$ in a replay buffer and samples random mini-batches for training. This breaks correlation between consecutive samples and improves learning stability.
+
+\subsubsection{Target Network}
+A separate target network with parameters $\theta^-$ is used to calculate target Q-values. This network is periodically synchronized with the policy network, reducing oscillations during training.
+
+\subsubsection{Epsilon-Greedy Exploration}
+The agent balances exploration and exploitation using an $\epsilon$-greedy policy:
+\begin{itemize}
+    \item With probability $\epsilon$: select random action (exploration)
+    \item With probability $1-\epsilon$: select $\arg\max_a Q(s, a)$ (exploitation)
+\end{itemize}
+$\epsilon$ decays over time from 1.0 to a minimum value (0.05).
+
+\section{Methodology}
+
+\subsection{Environment Setup}
+The project uses the Flappy Bird Gymnasium environment with the following specifications:
+
+\textbf{State Space (12 dimensions):}
+\begin{itemize}
+    \item Last pipe horizontal position
+    \item Last top/bottom pipe vertical positions
+    \item Next pipe horizontal position
+    \item Next top/bottom pipe vertical positions
+    \item Next-next pipe horizontal position
+    \item Next-next top/bottom pipe vertical positions
+    \item Player vertical position
+    \item Player vertical velocity
+    \item Player rotation
+\end{itemize}
+
+\textbf{Action Space:}
+\begin{itemize}
+    \item Action 0: Do nothing
+    \item Action 1: Flap wings
+\end{itemize}
+
+\textbf{Reward Structure:}
+\begin{itemize}
+    \item +0.1: Every frame alive
+    \item +1.0: Successfully passing a pipe
+    \item -1.0: Collision (death)
+    \item -0.5: Touching top of screen
+\end{itemize}
+
+\subsection{Neural Network Architecture}
+The DQN uses a simple fully-connected architecture:
+
+\begin{algorithm}
+\caption{DQN Forward Pass}
+\begin{algorithmic}
+\State \textbf{Input:} State vector $s \in \mathbb{R}^{12}$
+\State \textbf{Layer 1:} $h = \text{ReLU}(W_1 s + b_1)$, where $h \in \mathbb{R}^{512}$
+\State \textbf{Layer 2:} $Q = W_2 h + b_2$, where $Q \in \mathbb{R}^{2}$
+\State \textbf{Output:} Q-values for each action
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Hyperparameters}
+The following hyperparameters were used for Flappy Bird training:
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|l|c|}
+\hline
+\textbf{Parameter} & \textbf{Value} \\
+\hline
+Replay Memory Size & 100,000 \\
+Mini-batch Size & 32 \\
+Initial Epsilon ($\epsilon_0$) & 1.0 \\
+Epsilon Decay Rate & 0.99995 \\
+Minimum Epsilon ($\epsilon_{min}$) & 0.05 \\
+Network Sync Rate & 10 steps \\
+Learning Rate ($\alpha$) & 0.0001 \\
+Discount Factor ($\gamma$) & 0.99 \\
+Hidden Layer Nodes & 512 \\
+\hline
+\end{tabular}
+\caption{Hyperparameter Configuration}
+\end{table}
+
+\subsection{Training Algorithm}
+
+\begin{algorithm}
+\caption{DQN Training Loop}
+\begin{algorithmic}
+\State Initialize replay memory $\mathcal{D}$ with capacity $N$
+\State Initialize policy network $Q$ with random weights $\theta$
+\State Initialize target network $Q^-$ with weights $\theta^- = \theta$
+\For{episode = 1, 2, 3, ...}
+    \State Reset environment, get initial state $s$
+    \For{$t = 1, 2, 3, ...$}
+        \State Select action: $a = \begin{cases} 
+        \text{random} & \text{with prob. } \epsilon \\
+        \arg\max_a Q(s, a; \theta) & \text{otherwise}
+        \end{cases}$
+        \State Execute $a$, observe reward $r$ and next state $s'$
+        \State Store transition $(s, a, r, s', \text{done})$ in $\mathcal{D}$
+        \State Sample random mini-batch from $\mathcal{D}$
+        \State Compute target: $y = r + \gamma \max_{a'} Q^-(s', a'; \theta^-)$
+        \State Compute loss: $L = (y - Q(s, a; \theta))^2$
+        \State Update $\theta$ using gradient descent
+        \State Decay $\epsilon$: $\epsilon \leftarrow \max(\epsilon \cdot \lambda, \epsilon_{min})$
+        \State Every $C$ steps: $\theta^- \leftarrow \theta$
+        \State $s \leftarrow s'$
+    \EndFor
+\EndFor
+\end{algorithmic}
+\end{algorithm}
+
+\section{Implementation}
+
+\subsection{Project Structure}
+The project is organized into modular components:
+
+\begin{itemize}
+    \item \texttt{agent.py}: Main agent class implementing training and testing logic
+    \item \texttt{dqn.py}: Neural network architecture definition
+    \item \texttt{experience\_replay.py}: Replay memory implementation
+    \item \texttt{hyperparameters.yaml}: Configuration file for different environments
+    \item \texttt{main.py}: Entry point for training and evaluation
+\end{itemize}
+
+\subsection{Key Components}
+
+\subsubsection{DQN Network}
+The network is implemented using PyTorch with two fully-connected layers:
+\begin{itemize}
+    \item Input: 12-dimensional state vector
+    \item Hidden layer: 512 neurons with ReLU activation
+    \item Output: 2 Q-values (one per action)
+\end{itemize}
+
+\subsubsection{Experience Replay}
+Implemented using Python's \texttt{collections.deque} with maximum capacity of 100,000 transitions. Random sampling ensures decorrelated training batches.
+
+\subsubsection{Agent Class}
+The \texttt{Agent} class encapsulates:
+\begin{itemize}
+    \item Environment initialization
+    \item Network creation (policy and target)
+    \item Training loop with epsilon decay
+    \item Model saving and loading
+    \item Performance visualization
+\end{itemize}
+
+\subsection{Training Process}
+The agent trains through iterative episodes:
+\begin{enumerate}
+    \item Reset environment and get initial state
+    \item Select action using epsilon-greedy policy
+    \item Execute action and observe reward and next state
+    \item Store experience in replay memory
+    \item Sample mini-batch and perform gradient descent
+    \item Update target network periodically
+    \item Save model when new best reward is achieved
+    \item Generate training graphs every 10 seconds
+\end{enumerate}
+
+\section{Results and Analysis}
+
+\subsection{Training Performance}
+The agent demonstrates progressive learning throughout training:
+\begin{itemize}
+    \item \textbf{Early Episodes (0-100)}: Random exploration, low rewards
+    \item \textbf{Mid Training (100-500)}: Learning basic survival strategies
+    \item \textbf{Late Training (500+)}: Mastering pipe navigation
+\end{itemize}
+
+\subsection{Reward Progression}
+The training process tracks:
+\begin{itemize}
+    \item Episode rewards over time
+    \item Moving average (100-episode window)
+    \item Best reward achieved
+    \item Epsilon decay curve
+\end{itemize}
+
+\subsection{Key Observations}
+\begin{enumerate}
+    \item \textbf{Exploration-Exploitation Balance}: The epsilon-greedy strategy effectively balances exploration and exploitation
+    \item \textbf{Experience Replay Benefits}: Reduces correlation and improves sample efficiency
+    \item \textbf{Target Network Stability}: Periodic synchronization prevents divergence
+    \item \textbf{Reward Shaping}: The fine-grained reward structure (+0.1 per frame) provides continuous feedback
+\end{enumerate}
+
+\subsection{Computational Requirements}
+\begin{itemize}
+    \item \textbf{Hardware}: CPU-based training (forced in implementation)
+    \item \textbf{Framework}: PyTorch with Python 3.12
+    \item \textbf{Training Time}: Variable based on convergence
+    \item \textbf{Memory Usage}: Replay buffer occupies significant memory
+\end{itemize}
+
+\section{Advanced Features}
+
+\subsection{Double DQN}
+The implementation supports Double DQN to reduce overestimation bias:
+\begin{equation}
+y = r + \gamma Q(s', \arg\max_{a'} Q(s', a'; \theta); \theta^-)
+\end{equation}
+Action selection uses the policy network, while value estimation uses the target network.
+
+\subsection{Dueling DQN}
+Dueling architecture (optional) separates state value and advantage estimation:
+\begin{equation}
+Q(s, a) = V(s) + A(s, a) - \frac{1}{|A|}\sum_{a'} A(s, a')
+\end{equation}
+
+\subsection{Configuration Flexibility}
+The YAML configuration supports multiple environments:
+\begin{itemize}
+    \item \texttt{flappybird1}: Optimized for Flappy Bird
+    \item \texttt{cartpole1}: Alternative environment for testing
+\end{itemize}
+
+\section{Challenges and Solutions}
+
+\subsection{Training Instability}
+\textbf{Challenge:} Q-value estimates can diverge during early training.
+\\
+\textbf{Solution:} Target network updates every 10 steps stabilize learning.
+
+\subsection{Sparse Rewards}
+\textbf{Challenge:} Agent dies frequently before earning substantial rewards.
+\\
+\textbf{Solution:} Dense reward shaping (+0.1 per frame alive) provides continuous feedback.
+
+\subsection{Sample Efficiency}
+\textbf{Challenge:} On-policy learning is sample inefficient.
+\\
+\textbf{Solution:} Experience replay allows multiple gradient updates per environment step.
+
+\subsection{Exploration}
+\textbf{Challenge:} Pure exploitation leads to suboptimal policies.
+\\
+\textbf{Solution:} Epsilon-greedy with slow decay ensures sufficient exploration.
+
+\section{Conclusion and Future Work}
+
+\subsection{Conclusion}
+This project successfully implements a Deep Q-Learning agent capable of learning to play Flappy Bird through reinforcement learning. The agent demonstrates the effectiveness of value-based methods combined with neural networks for solving complex sequential decision problems. Key contributions include:
+\begin{itemize}
+    \item Modular implementation supporting multiple environments
+    \item Configurable hyperparameters via YAML files
+    \item Support for advanced DQN variants (Double, Dueling)
+    \item Comprehensive training monitoring and visualization
+\end{itemize}
+
+\subsection{Future Enhancements}
+Several directions could further improve the agent:
+
+\subsubsection{Algorithmic Improvements}
+\begin{itemize}
+    \item \textbf{Prioritized Experience Replay}: Sample important transitions more frequently
+    \item \textbf{Rainbow DQN}: Combine multiple DQN improvements
+    \item \textbf{Noisy Networks}: Replace epsilon-greedy with learned exploration
+\end{itemize}
+
+\subsubsection{Architecture Enhancements}
+\begin{itemize}
+    \item \textbf{Convolutional Networks}: Process raw pixel input
+    \item \textbf{Recurrent Layers}: Handle partial observability
+    \item \textbf{Attention Mechanisms}: Focus on relevant state features
+\end{itemize}
+
+\subsubsection{Multi-Environment Training}
+\begin{itemize}
+    \item Transfer learning across similar games
+    \item Meta-learning for rapid adaptation
+    \item Curriculum learning with increasing difficulty
+\end{itemize}
+
+\subsection{Lessons Learned}
+\begin{enumerate}
+    \item Hyperparameter tuning is crucial for RL success
+    \item Reward shaping significantly impacts learning speed
+    \item Stability mechanisms (target network, experience replay) are essential
+    \item Monitoring training progress requires careful instrumentation
+\end{enumerate}
+
+\section{References}
+
+\begin{enumerate}
+    \item Mnih, V., et al. (2015). "Human-level control through deep reinforcement learning." \textit{Nature}, 518(7540), 529-533.
+    
+    \item Van Hasselt, H., Guez, A., \& Silver, D. (2016). "Deep reinforcement learning with double Q-learning." \textit{Proceedings of the AAAI Conference on Artificial Intelligence}.
+    
+    \item Wang, Z., et al. (2016). "Dueling network architectures for deep reinforcement learning." \textit{International Conference on Machine Learning}.
+    
+    \item Sutton, R. S., \& Barto, A. G. (2018). \textit{Reinforcement Learning: An Introduction}. MIT Press.
+    
+    \item Gymnasium Documentation. "Flappy Bird Environment." \\
+    \url{https://github.com/Farama-Foundation/Gymnasium}
+    
+    \item PyTorch Documentation. "Deep Learning Framework." \\
+    \url{https://pytorch.org/docs/stable/index.html}
+\end{enumerate}
+
+\appendix
+\section{Appendix: Code Snippets}
+
+\subsection{DQN Network Definition}
+\begin{lstlisting}
+class DQN(nn.Module):
+    def __init__(self, state_dim, action_dim, hidden_dim=512):
+        super(DQN, self).__init__()
+        self.fc1 = nn.Linear(state_dim, hidden_dim)
+        self.fc2 = nn.Linear(hidden_dim, action_dim)
+    
+    def forward(self, x):
+        x = F.relu(self.fc1(x))
+        return self.fc2(x)
+\end{lstlisting}
+
+\subsection{Experience Replay Implementation}
+\begin{lstlisting}
+class ReplayMemory():
+    def __init__(self, maxlen, seed=None):
+        self.memory = deque([], maxlen=maxlen)
+        if seed is not None:
+            random.seed(seed)
+    
+    def append(self, transition):
+        self.memory.append(transition)
+    
+    def sample(self, sample_size):
+        return random.sample(self.memory, sample_size)
+\end{lstlisting}
+
+\end{document}
